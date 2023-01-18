@@ -59,15 +59,19 @@ services:
       - SCHEMA_REGISTRY_HOST_NAME=schema-registry
       - SCHEMA_REGISTRY_LISTENERS=http://schema-registry:8081,http://localhost:8081
       - SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS=//kafka:9092
+    networks:
+      - test
 
   postgres:
-    image: postgres
+    image: postgres:12.9
     container_name: postgres
     environment:
       - POSTGRES_USER=thang
       - POSTGRES_PASSWORD=123
+      - POSTGRES_MULTIPLE_DATABASES=demo1
     volumes:
-      - postgres:/data/postgres
+      - ./postgres:/data/postgres
+      - ./conf/postgres-multiple_databases.sh:/docker-entrypoint-initdb.d/
     ports:
       - "5432:5432"
     networks:
@@ -102,4 +106,4 @@ services:
 
 networks:
   test:
-    external: true
+    driver: bridge
