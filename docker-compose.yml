@@ -1,64 +1,42 @@
 version: "3.7"
 
 services:
-  zookeeper:
-    image: debezium/zookeeper:1.0
-    container_name: zookeeper
-    ports:
-      - "2181:2181"
-      - "2888:2888"
-      - "3888:3888"
-    networks:
-      - test
-    restart: always
-
-  kafka:
-    image: debezium/kafka:1.0
-    container_name: kafka
-    restart: always
-    ports:
-      - "9092:9092"
-    links:
-      - zookeeper
-    environment:
-      - ZOOKEEPER_CONNECT=zookeeper:2181
-    depends_on:
-      - zookeeper
+  redis:
+    container_name: redis
+    image: redis:6.2-alpine
     networks:
       - test
 
-  kafka-connect:
-    image: debezium/connect:1.0
-    container_name: kafka-connect
+  pgsync:
+    image: reborn1998/pgsync:latest
+    labels:
+      org.label-schema.name: "pgsync"
+      org.label-schema.description: "Postgres to Elasticsearch sync"
+      com.label-schema.service-type: "daemon"
+    sysctls:
+      - net.ipv4.tcp_keepalive_time=200
+      - net.ipv4.tcp_keepalive_intvl=200
+      - net.ipv4.tcp_keepalive_probes=5
+    container_name: pgsync
     depends_on:
-      - kafka
       - postgres
+      - redis
       - elasticsearch
-      - zookeeper
-    restart: always
     environment:
-      - BOOTSTRAP_SERVERS=kafka:9092
-      - GROUP_ID=1
-      - CONFIG_STORAGE_TOPIC=my_connect_configs
-      - OFFSET_STORAGE_TOPIC=my_connect_offsets
-      - STATUS_STORAGE_TOPIC=my_connect_statuses
-      - KEY_CONVERTER=io.confluent.connect.avro.AvroConverter
-      - VALUE_CONVERTER=io.confluent.connect.avro.AvroConverter
-      - CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL=http://schema-registry:8081
-      - CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL=http://schema-registry:8081
-      - INTERNAL_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
-      - INTERNAL_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
-    networks:
-      - test
-
-  schema-registry:
-    image: confluentinc/cp-schema-registry:5.5.3
-    container_name: registry
-    environment:
-      - SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL=zookeeper:2181
-      - SCHEMA_REGISTRY_HOST_NAME=schema-registry
-      - SCHEMA_REGISTRY_LISTENERS=http://schema-registry:8081,http://localhost:8081
-      - SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS=//kafka:9092
+      - PG_USER=postgres
+      - PG_HOST=postgres
+      - PG_PORT=5432
+      - PG_PASSWORD=test
+      - LOG_LEVEL=INFO
+      - ELASTICSEARCH_PORT=9200
+      - ELASTICSEARCH_SCHEME=http
+      - ELASTICSEARCH_HOST=elasticsearch
+      - ELASTICSEARCH=true
+      - ELASTICSEARCH_USER=elastic
+      - ELASTICSEARCH_PASSWORD=test
+      - OPENSEARCH=false
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     networks:
       - test
 
@@ -66,19 +44,17 @@ services:
     image: postgres:12.9
     container_name: postgres
     environment:
-      - POSTGRES_USER=thang
-      - POSTGRES_PASSWORD=123
-      - POSTGRES_MULTIPLE_DATABASES=demo1
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=test
     volumes:
-      - ./postgres:/data/postgres
-      - ./conf/postgres-multiple_databases.sh:/docker-entrypoint-initdb.d/
+      - ./postgres:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     networks:
       - test
 
   elasticsearch:
-    image: reborn1998/elasticsearch-vietnamese:1.0.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.1
     container_name: elasticsearch
     environment:
       - node.name=elasticsearch
@@ -98,8 +74,7 @@ services:
       - "9200:9200"
     depends_on:
       - postgres
-      - kafka
-      - zookeeper
+      - redis
     networks:
       - test
     restart: always
