@@ -6,5 +6,9 @@
 - https://github.com/debezium/debezium-examples/blob/main/unwrap-smt/es-sink.json
 
 ### How to set up
-- `docker-compose up -d`
-- Run `start `
+- Run `./start.sh` to start project
+- Run `./stop.sh` to clean project
+
+
+### List tables sync
+- "table.exclude.list": "public.users", in `source.json` defines which tables are not streamed to elasticsearch
