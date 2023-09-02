@@ -1,57 +1,37 @@
-version: "3.7"
-
+version: "3"
 services:
-  redis:
-    container_name: redis
-    image: redis:6.2-alpine
-    networks:
-      - test
+  zookeeper:
+    image: debezium/zookeeper
+    container_name: zookeeper
+    restart: always
+    ports:
+      - 2181:2181
+      - 2888:2888
+      - 3888:3888
 
-  pgsync:
-    image: reborn1998/pgsync:latest
-    labels:
-      org.label-schema.name: "pgsync"
-      org.label-schema.description: "Postgres to Elasticsearch sync"
-      com.label-schema.service-type: "daemon"
-    sysctls:
-      - net.ipv4.tcp_keepalive_time=200
-      - net.ipv4.tcp_keepalive_intvl=200
-      - net.ipv4.tcp_keepalive_probes=5
-    container_name: pgsync
-    depends_on:
-      - postgres
-      - redis
-      - elasticsearch
+  kafka:
+    image: debezium/kafka
+    container_name: kafka
+    restart: always
+    ports:
+      - 9092:9092
+    links:
+      - zookeeper
     environment:
-      - PG_USER=postgres
-      - PG_HOST=postgres
-      - PG_PORT=5432
-      - PG_PASSWORD=test
-      - LOG_LEVEL=INFO
-      - ELASTICSEARCH_PORT=9200
-      - ELASTICSEARCH_SCHEME=http
-      - ELASTICSEARCH_HOST=elasticsearch
-      - ELASTICSEARCH=true
-      - ELASTICSEARCH_USER=elastic
-      - ELASTICSEARCH_PASSWORD=test
-      - OPENSEARCH=false
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-    networks:
-      - test
+      - ZOOKEEPER_CONNECT=zookeeper:2181
 
   postgres:
-    image: postgres:12.9
+    image: debezium/postgres:15-alpine
     container_name: postgres
+    restart: always
+    ports:
+      - 5432:5432
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: test_db
     volumes:
       - ./postgres:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    networks:
-      - test
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.1
@@ -69,16 +49,28 @@ services:
       - ES_JAVA_OPTS=-Xms256m -Xmx256m
       - bootstrap.memory_lock=true
     volumes:
-      - ./elasticsearch/data:/var/lib/elasticsearch/data
+      - ./elasticsearch/data:/usr/share/elasticsearch/data
+#      - ./elasticsearch/data:/var/lib/elasticsearch/data #on ubuntu
     ports:
       - "9200:9200"
     depends_on:
       - postgres
-      - redis
-    networks:
-      - test
+      - kafka
     restart: always
 
-networks:
-  test:
-    driver: bridge
+  connect:
+    build: ./debezium-jdbc-es
+    container_name: connect
+    restart: always
+    ports:
+      - 8083:8083
+      - 5005:5005
+    links:
+      - kafka
+      - postgres
+      - elasticsearch
+    environment:
+      - BOOTSTRAP_SERVERS=kafka:9092
+      - GROUP_ID=1
+      - CONFIG_STORAGE_TOPIC=my_connect_configs
+      - OFFSET_STORAGE_TOPIC=my_connect_offsets
