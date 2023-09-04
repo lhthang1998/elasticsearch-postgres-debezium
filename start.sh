@@ -16,13 +16,15 @@ waitForHealth() {
 }
 
 createTopicsAndConnectors() {
-  curl -i -X PUT -u elastic:test -H "Accept:application/json" -H  "Content-Type:application/json" http://localhost:9200/users -d @reqs/mappings/users.json
-  curl -i -X PUT -u elastic:test -H "Accept:application/json" -H  "Content-Type:application/json" http://localhost:9200/posts -d @reqs/mappings/posts.json
+  # When you want to define mapping
+#  curl -i -X PUT -u elastic:test -H "Accept:application/json" -H  "Content-Type:application/json" http://localhost:9200/users -d @reqs/mappings/users.json
+#  curl -i -X PUT -u elastic:test -H "Accept:application/json" -H  "Content-Type:application/json" http://localhost:9200/posts -d @reqs/mappings/posts.json
 
   # setup connections
 
-  curl -i -X POST -H "Accept:application/json" -H  "Content-Type:application/json" http://localhost:8083/connectors/ -d @reqs/connections/es-sink-users.json
-  curl -i -X POST -H "Accept:application/json" -H  "Content-Type:application/json" http://localhost:8083/connectors/ -d @reqs/connections/es-sink-posts.json
+#  curl -i -X POST -H "Accept:application/json" -H  "Content-Type:application/json" http://localhost:8083/connectors/ -d @reqs/connections/es-sink-users.json
+#  curl -i -X POST -H "Accept:application/json" -H  "Content-Type:application/json" http://localhost:8083/connectors/ -d @reqs/connections/es-sink-posts.json
+  curl -i -X POST -H "Accept:application/json" -H  "Content-Type:application/json" http://localhost:8083/connectors/ -d @reqs/connections/es-sink.json
   curl -i -X POST -H "Accept:application/json" -H  "Content-Type:application/json" http://localhost:8083/connectors/ -d @reqs/connections/source.json
 
 }
